@@ -1,7 +1,9 @@
 [package]
 name = "randar"
 version = "0.1.0"
+authors = ["Adam Subora <adam.subora@proton.me>"]
 edition = "2021"
+description = "A program to generate random lidar files. Intended for use in testing different lidar storage and compression algorithms. Output lidar files are technically valid according to ASPRS specification, but may offer `worst case scenario` for some compression algorithms because of the randomness."
 
 [dependencies]
 anyhow = "1.0.97"

@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use tqdm::tqdm;
 
 #[derive(Clone, Debug, Parser)]
+#[command(author, version, about)]
 struct Args {
     /// Number of points in cloud
     #[arg(short, long, default_value_t = 10000)]
