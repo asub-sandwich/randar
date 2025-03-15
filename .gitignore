@@ -19,3 +19,9 @@ target/
 # Added by cargo
 
 /target
+
+# Added by Adam
+*.las
+*.laz
+*.txt
+*.gz

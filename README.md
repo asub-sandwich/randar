@@ -8,6 +8,26 @@ You can choose the LAS version and format, set the lateral extent and z-range,
 and the percent of points classified as ground. This was developed to aid in 
 testing of various lidar formats and compression efficiency tests.
 
+### Usage
+
+```
+Usage: randar [OPTIONS] <OUTPUT>
+
+Arguments:
+  <OUTPUT>  Output filename. Format is determined by extension
+
+Options:
+  -n, --num-points <NUM_POINTS>  Number of points in cloud [default: 10000]
+  -m, --minor <MINOR>            LAS Minor Version [default: 4]
+  -f, --format <FORMAT>          LAS Point Format (0 - 10) [default: 1]
+  -g, --ground <GROUND>          Percent (0 - 100) of points classified as Ground [default: 90]
+  -s, --surface                  Make Z-values surface-like
+  -h, --hills <HILLS>            Number of hills, otherwise random. Used with surface
+  -x, --x <X> <X>                W-E extent (meters) [default: 0 1000]
+  -y, --y <Y> <Y>                S-N extent (meters) [default: 0 1000]
+  -z, --z <Z> <Z>                Z extent (meters) [default: 0 100]
+```
+
 ## Getting Started
 
 ### Deps
@@ -26,6 +46,12 @@ cd randar
 
 cargo build --release
 ```
+
+## Future Plans / Known Issues
+
+1. Writing to anything but a LAS file is currently not working or not implemented.
+
+2. More control over surface generation
 
 ## Authors
 

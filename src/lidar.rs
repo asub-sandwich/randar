@@ -1,6 +1,7 @@
 use crate::args::parse;
 use anyhow::Result;
 use las::{point::Classification, raw::point::Waveform, Builder, Color, Point, Writer};
+use noise::{NoiseFn, Perlin};
 use rand::{prelude::*, Rng};
 use std::{fs::File, path::PathBuf};
 use tqdm::tqdm;
@@ -13,6 +14,8 @@ pub struct Lidar {
     pub las_version: u8,
     pub las_format: u8,
     pub ground: f64,
+    pub surface: bool,
+    pub hills: Option<u16>,
     pub xmin: f64,
     pub xmax: f64,
     pub ymin: f64,
@@ -46,14 +49,48 @@ impl Lidar {
         let f = File::create(self.output.clone())?;
         let mut writer = Writer::new(f, header)?;
 
+        let perlin = Perlin::new(42069);
+
+        let x_range = self.xmax - self.xmin;
+        let y_range = self.ymax - self.ymin;
+        let min_range = x_range.min(y_range);
+        let z_base = (self.zmin + self.zmax) / 2.0;
+        let z_var = self.zmax - z_base;
         let mut rng = rand::rng();
 
-        let desc = Some("Generating random points");
+        // Hill generation
+        let num_hills = if let Some(n) = self.hills {
+            n
+        } else {
+            let max_hills = min_range / 50.0;
+            rng.random_range(2..max_hills as u16)
+        };
+
+        let hills: Vec<(f64, f64, f64, f64)> = (0..num_hills)
+            .map(|_| {
+                let hill_x = rng.random_range(self.xmin..self.xmax);
+                let hill_y = rng.random_range(self.ymin..self.ymax);
+                let height = rng.random_range(5.0..z_var);
+                let spread = rng.random_range(30.0..(min_range / 2.0));
+                (hill_x, hill_y, height, spread)
+            })
+            .collect();
+
+        let desc = Some("Generating...");
 
         for _ in tqdm(0..self.num_points).desc(desc) {
             let x = rng.random_range(self.xmin..=self.xmax);
             let y = rng.random_range(self.ymin..=self.ymax);
-            let z = rng.random_range(self.zmin..=self.zmax);
+            let z = if self.surface {
+                let noise = perlin.get([x * 0.1 * z_var, y * 0.1 * z_var]);
+                let mut zh = z_base + noise + z_var;
+                for (hill_x, hill_y, height, spread) in &hills {
+                    zh += gaussian_hill(x, y, *hill_x, *hill_y, *height, *spread);
+                }
+                zh
+            } else {
+                rng.random_range(self.zmin..=self.zmax)
+            };
             let intensity = rng.random();
             let return_number = match self.las_format {
                 0..=5 => rng.random_range(0..8),
@@ -170,6 +207,13 @@ fn class_vec() -> Vec<Classification> {
         Classification::ModelKeyPoint,
         Classification::Water,
     ]
+}
+
+fn gaussian_hill(x: f64, y: f64, hill_x: f64, hill_y: f64, height: f64, spread: f64) -> f64 {
+    let dx = x - hill_x;
+    let dy = y - hill_y;
+    let distance = (dx * dx + dy * dy).sqrt();
+    height * (-distance.powi(2) / (2.0 * spread.powi(2))).exp()
 }
 
 #[derive(Clone, Debug, Default)]

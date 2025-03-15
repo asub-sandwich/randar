@@ -19,6 +19,12 @@ struct Args {
     /// Percent (0 - 100) of points classified as Ground
     #[arg(short, long, default_value_t = 90.)]
     ground: f64,
+    /// Make Z-values surface-like
+    #[arg(short, long, default_value_t = false)]
+    surface: bool,
+    /// Number of hills, otherwise random. Used with surface
+    #[arg(short, long)]
+    hills: Option<u16>,
     /// W-E extent (meters)
     #[arg(short, long, num_args = 2, default_values_t = [0.,1000.])]
     x: Vec<f64>,
@@ -82,7 +88,8 @@ pub fn parse() -> Result<Lidar> {
         println!("Warning! Invalid ground percentage. Defaulting to 90%!");
         0.9
     };
-
+    let surface = args.surface;
+    let hills = args.hills;
     let (xmin, xmax) = {
         let (x1, x2) = (args.x[0], args.x[1]);
         (x1.min(x2), x1.max(x2))
@@ -103,6 +110,8 @@ pub fn parse() -> Result<Lidar> {
         las_version,
         las_format,
         ground,
+        surface,
+        hills,
         xmin,
         xmax,
         ymin,
