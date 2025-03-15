@@ -49,7 +49,7 @@ cargo build --release
 
 ## Future Plans / Known Issues
 
-1. Writing to anything but a LAS file is currently not working or not implemented.
+1. Currently, only LAS and LAZ files can be generated. I would like to add ASCII and G-Zipped ASCII files, but those are currently being made by using RapidLasso's las2txt binary after generation of las files. 
 
 2. More control over surface generation
 

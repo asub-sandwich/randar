@@ -39,6 +39,11 @@ impl Lidar {
     fn generate_las(&self) -> Result<()> {
         let mut builder = Builder::from((1, self.las_version));
         builder.point_format = las::point::Format::new(self.las_format)?;
+        builder.point_format.is_compressed = match self.file_type {
+            FileType::Las => false,
+            FileType::Laz => true,
+            _ => unreachable!(),
+        };
         let has_gps = builder.point_format.has_gps_time;
         let has_color = builder.point_format.has_color;
         let has_nir = builder.point_format.has_nir;
@@ -92,16 +97,8 @@ impl Lidar {
                 rng.random_range(self.zmin..=self.zmax)
             };
             let intensity = rng.random();
-            let return_number = match self.las_format {
-                0..=5 => rng.random_range(0..8),
-                6..=10 => rng.random_range(0..16),
-                _ => unreachable!(),
-            };
-            let number_of_returns = match self.las_format {
-                0..=5 => rng.random_range(return_number..8),
-                6..=10 => rng.random_range(return_number..16),
-                _ => unreachable!(),
-            };
+            let return_number = rng.random_range(0..6);
+            let number_of_returns = rng.random_range(return_number..6);
             let scan_direction = match rng.random_bool(0.5) {
                 true => las::point::ScanDirection::RightToLeft,
                 false => las::point::ScanDirection::LeftToRight,

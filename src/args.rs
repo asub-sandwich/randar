@@ -23,7 +23,7 @@ struct Args {
     #[arg(short, long, default_value_t = false)]
     surface: bool,
     /// Number of hills, otherwise random. Used with surface
-    #[arg(short, long)]
+    #[arg(long)]
     hills: Option<u16>,
     /// W-E extent (meters)
     #[arg(short, long, num_args = 2, default_values_t = [0.,1000.])]
