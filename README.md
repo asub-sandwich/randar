@@ -53,6 +53,8 @@ cargo build --release
 
 2. More control over surface generation
 
+3. Binary is not yet portable due to the use of the rand crate, but can be built on any system.
+
 ## Authors
 
 Adam Subora <adam.subora@proton.me>
