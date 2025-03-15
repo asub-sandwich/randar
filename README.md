@@ -27,8 +27,6 @@ cd randar
 cargo build --release
 ```
 
-Optionally, you can use a symlink to "install" `randar` into your local path. 
-
 ## Authors
 
 Adam Subora <adam.subora@proton.me>
