@@ -25,3 +25,6 @@ target/
 *.laz
 *.txt
 *.gz
+
+*.zst
+pkg/
