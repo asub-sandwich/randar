@@ -1,4 +1,4 @@
-# Randar
+# Randlas
 
 A tool to generate completely random lidar files from the command line, written completely in rust. 
 
