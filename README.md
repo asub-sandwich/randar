@@ -11,7 +11,7 @@ testing of various lidar formats and compression efficiency tests.
 ### Usage
 
 ```
-Usage: randar [OPTIONS] <OUTPUT>
+Usage: randlas [OPTIONS] <OUTPUT>
 
 Arguments:
   <OUTPUT>  Output filename. Format is determined by extension
@@ -39,15 +39,15 @@ Options:
 * Install from crates.io:
 
 ```bash
-cargo install randar
+cargo install randlas
 ```
 
 * Install from source:
 
 ```bash
-git clone https://asub-sandwich/randar.git
+git clone https://asub-sandwich/randlas.git
 
-cd randar
+cd randlas
 
 cargo build --release
 ```
