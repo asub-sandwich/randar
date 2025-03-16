@@ -22,7 +22,7 @@ Options:
   -f, --format <FORMAT>          LAS Point Format (0 - 10) [default: 1]
   -g, --ground <GROUND>          Percent (0 - 100) of points classified as Ground [default: 90]
   -s, --surface                  Make Z-values surface-like
-  -h, --hills <HILLS>            Number of hills, otherwise random. Used with surface
+  --hills <HILLS>                Number of hills, otherwise random. Used with surface
   -x, --x <X> <X>                W-E extent (meters) [default: 0 1000]
   -y, --y <Y> <Y>                S-N extent (meters) [default: 0 1000]
   -z, --z <Z> <Z>                Z extent (meters) [default: 0 100]
@@ -32,12 +32,17 @@ Options:
 
 ### Deps
 
-* las2txt (From RapidLasso's LASTools) (Optional)
-* Tested on Arch Linux, should be able to be built on any OS via Cargo
+* Tested on Arch Linux
 
 ### Building
 
-Upon request, binaries can be built for distrobution, until then, build with cargo!
+* Install from crates.io:
+
+```bash
+cargo install randar
+```
+
+* Install from source:
 
 ```bash
 git clone https://asub-sandwich/randar.git
@@ -49,17 +54,26 @@ cargo build --release
 
 ## Future Plans / Known Issues
 
-1. Currently, only LAS and LAZ files can be generated. I would like to add ASCII and G-Zipped ASCII files, but those are currently being made by using RapidLasso's las2txt binary after generation of las files. 
+1. Currently, only LAS and LAZ files can be generated. I would like to add ASCII and G-Zipped ASCII files, but those are currently being made by using RapidLasso's las2txt(64) binary after generation of las files. 
 
 2. More control over surface generation
 
-3. Binary is not yet portable due to the use of the rand crate, but can be built on any system.
+3. Binary is not yet portable due to the use of the rand crate.
+
+### Additonal Disclaimers
+
+1. This generates lidar files similar to what would be taken with Aerial Lidar Scanners, that is, evenly distributed across an area. Simulation of terrestrial lidar scanners would be interesting.
+
+2. My programming is almost entirely self taught; if you find an issue or find that I have violated a custom, please let me know! 
 
 ## Authors
 
 Adam Subora <adam.subora@proton.me>
 
 ## Version History
+
+* 0.1.1
+    * Changed Progress Bar from TQDM to Indicatif
 
 * 0.1.0
     * Initial Release

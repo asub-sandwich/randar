@@ -1,10 +1,10 @@
 use crate::args::parse;
 use anyhow::Result;
+use indicatif::ProgressBar;
 use las::{point::Classification, raw::point::Waveform, Builder, Color, Point, Writer};
 use noise::{NoiseFn, Perlin};
 use rand::{prelude::*, Rng};
 use std::{fs::File, path::PathBuf};
-use tqdm::tqdm;
 
 #[derive(Clone, Debug, Default)]
 pub struct Lidar {
@@ -37,6 +37,7 @@ impl Lidar {
     }
 
     fn generate_las(&self) -> Result<()> {
+        let pb = ProgressBar::new(self.num_points as u64);
         let mut builder = Builder::from((1, self.las_version));
         builder.point_format = las::point::Format::new(self.las_format)?;
         builder.point_format.is_compressed = match self.file_type {
@@ -81,9 +82,7 @@ impl Lidar {
             })
             .collect();
 
-        let desc = Some("Generating...");
-
-        for _ in tqdm(0..self.num_points).desc(desc) {
+        for _ in 0..self.num_points {
             let x = rng.random_range(self.xmin..=self.xmax);
             let y = rng.random_range(self.ymin..=self.ymax);
             let z = if self.surface {
@@ -181,7 +180,9 @@ impl Lidar {
                 extra_bytes,
             };
             writer.write_point(point)?;
+            pb.inc(1);
         }
+        pb.finish_and_clear();
         Ok(())
     }
 
