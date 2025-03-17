@@ -60,6 +60,8 @@ cargo build --release
 
 3. Binary is not yet portable due to the use of the rand crate.
 
+4. LAS formats (4,5,9,10) with waveforms are buggy at best, usually unreadable. I wanted to include the waveforms inside the LAS file, but support for this is not great across software. LASTools, PDAL and ArcGIS do not support this feature at least, and tbh, I'm not sure how much these formats are used anyway, especially within the Geomorph community. If there is a need, I will look into it more.
+
 ### Additonal Disclaimers
 
 1. This generates lidar files similar to what would be taken with Aerial Lidar Scanners, that is, evenly distributed across an area. Simulation of terrestrial lidar scanners would be interesting.
