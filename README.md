@@ -32,9 +32,14 @@ Options:
 
 ### Deps
 
-* Tested on Arch Linux
+* Tested on Arch Linux, Debian, and Windows 11
 
-### Building
+### Installation
+
+* Pre-built binaries
+    + Debian
+    + Statically linked linux binary
+    + Windows
 
 * Install from crates.io:
 
