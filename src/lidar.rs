@@ -152,7 +152,7 @@ impl Lidar {
             let extra_bytes = if num_extra_bytes == 0 {
                 vec![]
             } else {
-                (0..num_extra_bytes).map(|_| rng.random()).collect()
+                (0..num_extra_bytes).map(|_| rng.random::<u8>()).collect()
             };
 
             let point = Point {
