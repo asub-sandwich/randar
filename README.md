@@ -41,7 +41,7 @@ Options:
     + Statically linked linux binary
     + Windows
 
-* Install from crates.io:
+* Install from crates.io: https://crates.io/crates/randlas
 
 ```bash
 cargo install randlas
