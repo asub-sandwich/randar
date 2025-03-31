@@ -4,7 +4,12 @@ use indicatif::ProgressBar;
 use las::{point::Classification, raw::point::Waveform, Builder, Color, Point, Writer};
 use noise::{NoiseFn, Perlin};
 use rand::{prelude::*, Rng};
-use std::{fs::File, path::PathBuf};
+use std::{
+    fs::File,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+    thread,
+};
 
 #[derive(Clone, Debug, Default)]
 pub struct Lidar {
@@ -53,7 +58,7 @@ impl Lidar {
         let header = builder.into_header()?;
 
         let f = File::create(self.output.clone())?;
-        let mut writer = Writer::new(f, header)?;
+        let writer = Writer::new(f, header)?;
 
         let perlin = Perlin::new(42069);
 
@@ -63,6 +68,11 @@ impl Lidar {
         let z_base = (self.zmin + self.zmax) / 2.0;
         let z_var = self.zmax - z_base;
         let mut rng = rand::rng();
+
+        let num_cpus = thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1);
+        // let num_cpus = 1;
 
         // Hill generation
         let num_hills = if let Some(n) = self.hills {
@@ -82,106 +92,131 @@ impl Lidar {
             })
             .collect();
 
-        for _ in 0..self.num_points {
-            let x = rng.random_range(self.xmin..=self.xmax);
-            let y = rng.random_range(self.ymin..=self.ymax);
-            let z = if self.surface {
-                let noise = perlin.get([x * 0.1 * z_var, y * 0.1 * z_var]);
-                let mut zh = z_base + noise + z_var;
-                for (hill_x, hill_y, height, spread) in &hills {
-                    zh += gaussian_hill(x, y, *hill_x, *hill_y, *height, *spread);
-                }
-                zh
-            } else {
-                rng.random_range(self.zmin..=self.zmax)
-            };
-            let intensity = rng.random();
-            let return_number = rng.random_range(0..6);
-            let number_of_returns = rng.random_range(return_number..6);
-            let scan_direction = match rng.random_bool(0.5) {
-                true => las::point::ScanDirection::RightToLeft,
-                false => las::point::ScanDirection::LeftToRight,
-            };
-            let is_edge_of_flight_line = rng.random_bool(0.001);
-            let classification = match rng.random_bool(self.ground) {
-                true => Classification::Ground,
-                false => {
-                    if let Some(cls) = class_vec().choose(&mut rng) {
-                        *cls
-                    } else {
-                        Classification::Ground
-                    }
-                }
-            };
-            let is_synthetic = rng.random_bool(0.001);
-            let is_key_point = rng.random_bool(0.001);
-            let is_withheld = rng.random_bool(0.001);
-            let is_overlap = rng.random_bool(0.1);
-            let scanner_channel = 0;
-            let scan_angle = rng.random_range(-90.0..=90.0);
-            let user_data = rng.random();
-            let point_source_id = 42069;
-            let gps_time = match has_gps {
-                true => Some(rng.random()),
-                false => None,
-            };
-            let color = match has_color {
-                true => Some(Color {
-                    red: rng.random(),
-                    green: rng.random(),
-                    blue: rng.random(),
-                }),
-                false => None,
-            };
-            let waveform = match has_waveform {
-                true => Some(Waveform {
-                    wave_packet_descriptor_index: rng.random(),
-                    byte_offset_to_waveform_data: rng.random(),
-                    waveform_packet_size_in_bytes: rng.random(),
-                    return_point_waveform_location: rng.random(),
-                    x_t: rng.random(),
-                    y_t: rng.random(),
-                    z_t: rng.random(),
-                }),
-                false => None,
-            };
-            let nir = match has_nir {
-                true => Some(rng.random()),
-                false => None,
-            };
-            let extra_bytes = if num_extra_bytes == 0 {
-                vec![]
-            } else {
-                (0..num_extra_bytes).map(|_| rng.random::<u8>()).collect()
-            };
+        let shared_hills = Arc::new(hills);
+        let mut handles = vec![];
+        let writer = Arc::new(Mutex::new(writer));
 
-            let point = Point {
-                x,
-                y,
-                z,
-                intensity,
-                return_number,
-                number_of_returns,
-                scan_direction,
-                is_edge_of_flight_line,
-                classification,
-                is_synthetic,
-                is_key_point,
-                is_withheld,
-                is_overlap,
-                scanner_channel,
-                scan_angle,
-                user_data,
-                point_source_id,
-                gps_time,
-                color,
-                waveform,
-                nir,
-                extra_bytes,
-            };
-            writer.write_point(point)?;
-            pb.inc(1);
+        for _ in 0..num_cpus {
+            let hills = Arc::clone(&shared_hills);
+            let xmin = self.xmin;
+            let xmax = self.xmax;
+            let ymin = self.ymin;
+            let ymax = self.ymax;
+            let zmin = self.zmin;
+            let zmax = self.zmax;
+            let surface = self.surface;
+            let ground = self.ground;
+            let writer = Arc::clone(&writer);
+            let handle = thread::spawn(move || {
+                let mut rng = rand::rng();
+                let x = rng.random_range(xmin..=xmax);
+                let y = rng.random_range(ymin..=ymax);
+                let z = if surface {
+                    let noise = perlin.get([x * 0.1 * z_var, y * 0.1 * z_var]);
+                    let mut zh = z_base + noise + z_var;
+
+                    let _ = hills.iter().map(|(hx, hy, h, s)| {
+                        zh += gaussian_hill(x, y, hx, hy, h, s);
+                    });
+
+                    zh
+                } else {
+                    rng.random_range(zmin..=zmax)
+                };
+                let intensity = rng.random();
+                let return_number = rng.random_range(0..6);
+                let number_of_returns = rng.random_range(return_number..6);
+                let scan_direction = match rng.random_bool(0.5) {
+                    true => las::point::ScanDirection::RightToLeft,
+                    false => las::point::ScanDirection::LeftToRight,
+                };
+                let is_edge_of_flight_line = rng.random_bool(0.001);
+                let classification = match rng.random_bool(ground) {
+                    true => Classification::Ground,
+                    false => {
+                        if let Some(cls) = class_vec().choose(&mut rng) {
+                            *cls
+                        } else {
+                            Classification::Ground
+                        }
+                    }
+                };
+                let is_synthetic = rng.random_bool(0.001);
+                let is_key_point = rng.random_bool(0.001);
+                let is_withheld = rng.random_bool(0.001);
+                let is_overlap = rng.random_bool(0.1);
+                let scanner_channel = 0;
+                let scan_angle = rng.random_range(-90.0..=90.0);
+                let user_data = rng.random();
+                let point_source_id = 42069;
+                let gps_time = match has_gps {
+                    true => Some(rng.random()),
+                    false => None,
+                };
+                let color = match has_color {
+                    true => Some(Color {
+                        red: rng.random(),
+                        green: rng.random(),
+                        blue: rng.random(),
+                    }),
+                    false => None,
+                };
+                let waveform = match has_waveform {
+                    true => Some(Waveform {
+                        wave_packet_descriptor_index: rng.random(),
+                        byte_offset_to_waveform_data: rng.random(),
+                        waveform_packet_size_in_bytes: rng.random(),
+                        return_point_waveform_location: rng.random(),
+                        x_t: rng.random(),
+                        y_t: rng.random(),
+                        z_t: rng.random(),
+                    }),
+                    false => None,
+                };
+                let nir = match has_nir {
+                    true => Some(rng.random()),
+                    false => None,
+                };
+                let extra_bytes = if num_extra_bytes == 0 {
+                    vec![]
+                } else {
+                    (0..num_extra_bytes).map(|_| rng.random::<u8>()).collect()
+                };
+
+                let point = Point {
+                    x,
+                    y,
+                    z,
+                    intensity,
+                    return_number,
+                    number_of_returns,
+                    scan_direction,
+                    is_edge_of_flight_line,
+                    classification,
+                    is_synthetic,
+                    is_key_point,
+                    is_withheld,
+                    is_overlap,
+                    scanner_channel,
+                    scan_angle,
+                    user_data,
+                    point_source_id,
+                    gps_time,
+                    color,
+                    waveform,
+                    nir,
+                    extra_bytes,
+                };
+                let mut writer = writer.lock().unwrap();
+                writer.write_point(point).unwrap();
+            });
+            handles.push(handle);
         }
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
         pb.finish_and_clear();
         Ok(())
     }
@@ -207,7 +242,7 @@ fn class_vec() -> Vec<Classification> {
     ]
 }
 
-fn gaussian_hill(x: f64, y: f64, hill_x: f64, hill_y: f64, height: f64, spread: f64) -> f64 {
+fn gaussian_hill(x: f64, y: f64, hill_x: &f64, hill_y: &f64, height: &f64, spread: &f64) -> f64 {
     let dx = x - hill_x;
     let dy = y - hill_y;
     let distance = (dx * dx + dy * dy).sqrt();
