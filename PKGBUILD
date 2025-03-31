@@ -1,25 +1,25 @@
 # Maintainer: Adam Subora <adam.subora@proton.me>
 pkgname=randlas
-pkgver=0.1.1
+pkgver=1.0.0.r3.gd05779e
 pkgrel=1
-pkgdesc="A program to generate random lidar files."
+pkgdesc="Generate customizable but random lidar files."
 url="https://github.com/asub-sandwich/randlas"
 license=("MIT")
 arch=("x86_64")
 makedepends=("cargo")
 
-pkgver() {
-    (git describe --long --tags || echo "$pkgver") | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+prepare() {
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
 }
 
 build() {
-    return 0
+    export RUSTUP_TOOLCHAIN=stable
+    export CARGO_TARGET_DIR=target
+    cargo build --frozen --release --all-features
 }
 
 package() {
-    cd ..
-    usrdir="$pkgdir/usr"
-    mkdir -p $usrdir
-    cargo install --no-track --path . --root "$usrdir"
+    install -Dm0755 -t "$pkgdir/usr/bin" "target/release/$pkgname"
 }
 
